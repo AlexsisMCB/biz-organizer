@@ -1,12 +1,12 @@
+const mysql = require('mysql2');
 const inquirer = require('inquirer');
 const cTable = require('console.table');
-const mysql = require('mysql2');
 
 const connection = mysql.createConnection({
     host: 'localhost',
     port: 3306,
     user: 'root',
-    password: 'Jordyn1003',
+    password: '',
     database: 'biz'
 });
 
@@ -109,6 +109,12 @@ const addDepartment = () => {
             }
         }
     ]).then(data => {
+        const sql = `INSERT INTO department (name)
+        VALUES (?)`;
+        connection.query(sql)
+        .then( ([rows, field]) => {
+        console.table(rows);
+        });
         console.log(data);
         choices();
     });
@@ -222,3 +228,4 @@ const addEmployee = () => {
 };
 
 choices();
+
