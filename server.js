@@ -4,11 +4,14 @@ const cTable = require('console.table');
 
 const connection = mysql.createConnection({
     host: 'localhost',
-    port: 3306,
     user: 'root',
     password: '',
     database: 'biz'
 });
+
+const con = mysql.createConnection(
+    {host:'localhost', user: 'root', password: '', database: 'biz'}
+);
 
 connection.connect(err => {
     if (err) {
@@ -17,6 +20,7 @@ connection.connect(err => {
   
     console.log('MySQL server connected!');
 });
+
 
 viewDepartments = () => {
     const sql = 'SELECT * FROM department';
@@ -51,48 +55,6 @@ viewEmployees = () => {
     });
 };
 
-const choices = () => {
-    return inquirer.prompt([
-        {
-            type: 'list',
-            name: 'choices',
-            message: 'What would you like to do?',
-            choices: 
-            ['View all departments',
-            'View all roles',
-            'View all employees',
-            'Add a department',
-            'Add a role',
-            'Add an employee',
-            'Update an employee role',
-            'Quit']
-        }
-    ])
-    .then(data => {
-        if (data.choices === 'View all departments') {
-            viewDepartments();
-        } else if (data.choices === 'View all roles') {
-            viewRoles();
-        } else if (data.choices === 'View all employees') {
-            viewEmployees();
-        } else if (data.choices === 'Add a department') {
-            console.log('Add department');
-            addDepartment();
-        } else if (data.choices === 'Add a role') {
-            console.log('Add role');
-            addRole();
-        } else if (data.choices === 'Add an employee') {
-            console.log('Add employee');
-            addEmployee();
-        } else if (data.choices === 'Update an employee role') {
-            console.log('Update role');
-        } else {
-            console.log('Quit');
-            connection.end();
-        }
-    });
-};
-
 const addDepartment = () => {
     return inquirer.prompt([
         {
@@ -111,16 +73,19 @@ const addDepartment = () => {
     ]).then(data => {
         const sql = `INSERT INTO department (name)
         VALUES (?)`;
-        connection.query(sql)
-        .then( ([rows, field]) => {
-        console.table(rows);
+        const params = data.departmentName;
+        connection.promise()
+        .query(sql, params, function(err, res) {
+            if (err) throw err;
         });
-        console.log(data);
         choices();
     });
 }
 
 const addRole = () => {
+    con.promise().query("SELECT name FROM department")
+    .then( ([rows,fields]) => {
+        
     return inquirer.prompt([
         {
             type: 'input',
@@ -149,25 +114,26 @@ const addRole = () => {
             }
         },
         {
-            type: 'input',
+            type: 'list',
             name: 'roleDepartment',
-            message: 'What department is the the new role in?',
-            validate: roleDepartmentInput => {
-                if (roleDepartmentInput) {
-                    return true;
-                } else {
-                    console.log('Department please!');
-                    return false;
-                }
-            }
+            message: 'Assign a department number',
+            choices: rows
         }
     ]).then(data => {
-        console.log(data);
+        const sql = `INSERT INTO role (title, salary)
+        VALUES (?,?)`;
+        const params = [data.roleTitle, data.roleSalary];
+        connection.query(sql, params, function(err, res) {
+            if (err) throw err;
+        });
         choices();
     });
-}
+})};
 
 const addEmployee = () => {
+    con.promise().query("SELECT title FROM role")
+    .then( ([rows,fields]) => {
+
     return inquirer.prompt([
         {
             type: 'input',
@@ -196,36 +162,58 @@ const addEmployee = () => {
             }
         },
         {
-            type: 'input',
+            type: 'list',
             name: 'employeeRole',
             message: "What's the role of the employee?",
-            validate: employeeRoleInput => {
-                if (employeeRoleInput) {
-                    return true;
-                } else {
-                    console.log('Role please!');
-                    return false;
-                }
-            }
-        },
-        {
-            type: 'input',
-            name: 'employeeManager',
-            message: "Who is the manager for this employee?",
-            validate: employeeManagerInput => {
-                if (employeeManagerInput) {
-                    return true;
-                } else {
-                    console.log('Please assign a manager!');
-                    return false;
-                }
-            }
+            choices: rows
         }
     ]).then(data => {
-        console.log(data);
+        const sql = `INSERT INTO employee (first_name, last_name)
+        VALUES (?,?)`;
+        const params = [data.firstName, data.lastName];
+        connection.query(sql, params, function(err, res) {
+            if (err) throw err;
+        });
         choices();
+    });
+})};
+
+const choices = () => {
+    return inquirer.prompt([
+        {
+            type: 'list',
+            name: 'choices',
+            message: 'What would you like to do?',
+            choices: 
+            ['View all departments',
+            'View all roles',
+            'View all employees',
+            'Add a department',
+            'Add a role',
+            'Add an employee',
+            'Update an employee role',
+            'Quit']
+        }
+    ])
+    .then(data => {
+        if (data.choices === 'View all departments') {
+            viewDepartments();
+        } else if (data.choices === 'View all roles') {
+            viewRoles();
+        } else if (data.choices === 'View all employees') {
+            viewEmployees();
+        } else if (data.choices === 'Add a department') {
+            addDepartment();
+        } else if (data.choices === 'Add a role') {
+            addRole();
+        } else if (data.choices === 'Add an employee') {
+            addEmployee();
+        } else if (data.choices === 'Update an employee role') {
+            console.log('Update role');
+        } else if (data.choices === 'Quit') {
+            connection.end();
+        }
     });
 };
 
 choices();
-
